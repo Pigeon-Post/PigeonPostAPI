@@ -187,14 +187,31 @@ class RAG:
         return response.choices[0].message.content
 
     def _generate_gpt_response_with_contexts(self, question: str, contexts: List[str]) -> str:
+        system_message = """You are an AI assistant specifically trained to answer questions based ONLY on the provided lecture content. 
+        Your knowledge is limited to the information given in the context. Follow these rules strictly:
+        1. Only use information explicitly stated in the provided context.
+        2. If the context doesn't contain relevant information to answer the question, say "I don't have enough information to answer that question based on the provided lecture content."
+        3. Do not use any external knowledge or make assumptions beyond what's in the context.
+        4. If asked about topics not covered in the context, state that the lecture content doesn't cover that topic.
+        5. Be precise and concise in your answers, citing specific parts of the context when possible.
+        6. If the question is ambiguous or unclear based on the context, ask for clarification.
+        7. Never claim to know more than what's provided in the context.
+        8. If the context contains conflicting information, point out the inconsistency without resolving it.
+        Remember, your role is to interpret and relay the information from the lecture content, not to provide additional knowledge or opinions."""
+
+        context_message = "Context from lecture content:\n" + "\n".join(contexts)
+
         messages = [
-            {"role": "system", "content": "You are a helpful teaching assistant. Use the provided lecture content to answer the question."},
-            {"role": "user", "content": f"Contexts: {' '.join(contexts)}\n\nQuestion: {question}"}
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": context_message},
+            {"role": "user",
+             "content": f"Question: {question}\nAnswer only based on the above context, following the rules provided."}
         ]
+
         response = self.openai.chat.completions.create(
             model=Config.LLM_MODEL,
             messages=messages,
-            temperature=0.5
+            temperature=0.3  # Lower temperature for more deterministic outputs
         )
         return response.choices[0].message.content
 
